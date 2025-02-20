@@ -19,18 +19,18 @@ def get_publishable_key():
 
 def charge(email, stripe_token, amount):
     try:
-        customer = stripe.Customer.create(
-            email=email,
-            source=stripe_token
-        )
+        # customer = stripe.Customer.create(
+        #     email=email,
+        #     source=stripe_token
+        # )
 
-        stripe.Charge.create(
-            customer=customer.id,
-            amount=amount,
-            currency='usd',
-            description='MIT-Tab Server',
-            receipt_email=email
-        )
+        # stripe.Charge.create(
+        #     customer=customer.id,
+        #     amount=amount,
+        #     currency='usd',
+        #     description='MIT-Tab Server',
+        #     receipt_email=email
+        # )
         return True
     except stripe.error.StripeError as e:
         logger.error(f"Error charging {email}: {e}", exc_info=True)

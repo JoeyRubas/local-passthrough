@@ -1,87 +1,59 @@
 {% extends "base.html" %} {% block content %}
 <script src="https://checkout.stripe.com/checkout.js"></script>
 <script>
-    const dailyCost = {{daily_cost}}
-    const testDailyCost = {{test_cost}}
-    const fixedCost = {{fixed_cost}}
+  const dailyCost = {{daily_cost}};
+  const testDailyCost = {{test_cost}};
+  const fixedCost = {{fixed_cost}};
 
-    let checkbox;
-    let deletion_date;
-    let submit;
+  let checkbox;
+  let deletion_date;
+  let submit;
 
-    let stripeCost;
+  let stripeCost;
 
-    var handler = StripeCheckout.configure({
-      key: "{{stripe_key}}",
-      locale: 'auto',
-      token: function (token) {
-        document.tournament.stripe_token.value = token.id
-        document.tournament.submit()
-      }
-    });
+  function centsAsString(cents) {
+      return (cents / 100).toFixed(2);
+  }
 
-    function centsAsString(cents) {
-      return (cents / 100).toFixed(2)
-    }
+  function handleSubmit(event) {
+      event.preventDefault(); // Prevent the default form submission
 
-    function handleSubmit() {
-      const emailField = document.getElementById("email")
+      // Simulate successful payment
+      document.tournament.stripe_token.value = "test_dummy_token";
+      document.tournament.submit(); // Submit the form as if payment succeeded
+  }
 
-      if (!document.tournament.stripe_token.value) {
-        handler.open({
-          name: 'MIT-Tab',
-          description: 'MIT-Tab server',
-          email: emailField.value,
-          amount: stripeCost
-        });
-
-        if (submit) {
-          submit.disabled = true
-          submit.value = 'Processing payment...'
-        }
-      }
-
-      return !!document.tournament.stripe_token.value;
-    }
-
-    // Close Checkout on page navigation:
-    window.addEventListener('popstate', function () {
-      handler.close();
-    });
-
-    document.addEventListener('DOMContentLoaded', function () {
-      checkbox = document.getElementById("add_test")
-      deletion_date = document.getElementById("deletion_date")
-      submit = document.getElementById("submit_button")
+  document.addEventListener('DOMContentLoaded', function () {
+      checkbox = document.getElementById("add_test");
+      deletion_date = document.getElementById("deletion_date");
+      submit = document.getElementById("submit_button");
 
       function calculateCostAndUpdateButtonText() {
-        const daysActive = document.tournament.deletion_date.value
-          ? Math.max(0, Math.ceil((new Date(document.tournament.deletion_date.value) - new Date()) / (1000 * 60 * 60 * 24)))
-          : 0
+          const daysActive = document.tournament.deletion_date.value
+              ? Math.max(0, Math.ceil((new Date(document.tournament.deletion_date.value) - new Date()) / (1000 * 60 * 60 * 24)))
+              : 0;
 
-        console.log('days active', daysActive)
+          console.log('days active', daysActive);
 
-        if (daysActive <= 0) {
-          submit.disabled = true
-          submit.value = 'Confirm'
-          return;
-        }
+          submit.disabled = false;
+          stripeCost = fixedCost + dailyCost * daysActive;
 
-        submit.disabled = false;
-        stripeCost = fixedCost + dailyCost * daysActive;
-
-        if (checkbox.checked) {
-          stripeCost += testDailyCost * daysActive;
-        }
-        submit.value = 'Confirm & Pay $' + centsAsString(stripeCost)
+          if (checkbox.checked) {
+              stripeCost += testDailyCost * daysActive;
+          }
+          submit.value = 'Confirm & Pay $' + centsAsString(stripeCost);
       }
 
       checkbox.addEventListener('change', calculateCostAndUpdateButtonText);
       deletion_date.addEventListener('change', calculateCostAndUpdateButtonText);
 
       calculateCostAndUpdateButtonText();
-    })
+
+      // Override form submission to skip Stripe
+      document.tournament.addEventListener('submit', handleSubmit);
+  });
 </script>
+
 
 <center>
     <h1>Create a Tournament</h1>

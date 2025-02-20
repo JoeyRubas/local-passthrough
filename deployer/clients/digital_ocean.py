@@ -1,6 +1,6 @@
 import os
 import logging
-from time import time, sleep
+from time import time, sleep, strftime, gmtime
 
 import requests
 
@@ -9,6 +9,29 @@ __secret_key = os.environ['DIGITALOCEAN_ACCESS_KEY_SECRET']
 __token = os.environ['DIGITALOCEAN_TOKEN']
 
 logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
+logging.basicConfig(filename='log.txt', level=logging.INFO, format='%(asctime)s - %(message)s')
+
+
+def log_request(method, path, data=None):
+    timestamp = strftime("%Y-%m-%d %H:%M:%S", gmtime())
+    log_entry = f"[{timestamp}] {method} request to {path}"
+    if data:
+        log_entry += f" with data: {data}"
+    with open("log.txt", "a") as log_file:
+        log_file.write(log_entry + "\n")
+
+
+class NoDropletError(Exception):
+    def __init__(self, name, *args):
+        message = f"No droplet found with name '{name}'"
+        super().__init__(message, args)
+
+
+class NoRecordError(Exception):
+    def __init__(self, name, *args):
+        message = f"No domain record found with name '{name}'"
+        super().__init__(message, args)
 
 
 class NoDropletError(Exception):
@@ -53,7 +76,7 @@ def __build_app_spec(name, tab_password, database, repo_slug, branch):
     github_config = {
         "repo": repo_slug,
         "branch": branch,
-        "deploy_on_push": False,
+        "deploy_on_push": True,
     }
 
     base_config = {
@@ -82,7 +105,7 @@ def __build_app_spec(name, tab_password, database, repo_slug, branch):
             env_var("MYSQL_HOST", "${%s.HOSTNAME}" % database["name"]),
             env_var("MYSQL_PORT", "${%s.PORT}" % database["name"]),
             env_var("BACKUP_STORAGE", "S3"),
-            env_var("BACKUP_BUCKET", "mittab-backups"),
+            env_var("BACKUP_BUCKET", "uva-tab-backup-bucket"),
             env_var("BACKUP_PREFIX", f"backups/{name}/{int(time())}"),
             env_var("BACKUP_S3_ENDPOINT", "https://nyc3.digitaloceanspaces.com"),
             env_var("AWS_ACCESS_KEY_ID", __access_key, True),
@@ -91,6 +114,7 @@ def __build_app_spec(name, tab_password, database, repo_slug, branch):
             env_var("SENTRY_DSN", os.environ.get("MITTAB_SENTRY_DSN", ""), True),
             env_var("TOURNAMENT_NAME", name),
             env_var("DISCORD_BOT_TOKEN", os.environ.get("DISCORD_BOT_TOKEN", ""), True),
+            env_var("DOMAINS", "https://"+name+".uva-tab.site")
         ],
         "databases": [{
             "name": database["name"],
@@ -206,44 +230,47 @@ def is_database_ready(db_id):
 def __post(path, data):
     if not path.startswith("/"):
         path = f"/{path}"
-
+    log_request("POST", path, data)
     resp = requests.post(f"https://api.digitalocean.com/v2{path}",
-            json=data,
-            headers={"Authorization": f"Bearer {__token}"})
+                         json=data,
+                         headers={"Authorization": f"Bearer {__token}"})
     try:
         resp.raise_for_status()
         return resp.json()
     except Exception as e:
         logger.error(f"Error posting {path}: {e}", exc_info=True)
         logger.debug(resp.json())
+        log_request("error", path, resp.json())
         raise e
 
 
 def __delete(path):
     if not path.startswith("/"):
         path = f"/{path}"
-
+    log_request("DELETE", path)
     resp = requests.delete(f"https://api.digitalocean.com/v2{path}",
-            headers={"Authorization": f"Bearer {__token}"})
+                           headers={"Authorization": f"Bearer {__token}"})
     try:
         resp.raise_for_status()
         return
     except Exception as e:
         logger.error(f"Error deleting {path}: {e}", exc_info=True)
         logger.debug(resp.json())
+        log_request("error", path, resp.json())
         raise e
 
 
 def __get(path):
     if not path.startswith("/"):
         path = f"/{path}"
-
+    log_request("GET", path)
     resp = requests.get(f"https://api.digitalocean.com/v2{path}",
-            headers={"Authorization": f"Bearer {__token}"})
+                        headers={"Authorization": f"Bearer {__token}"})
     try:
         resp.raise_for_status()
         return resp.json()
     except Exception as e:
         logger.error(f"Error getting {path}: {e}", exc_info=True)
         logger.debug(resp.json())
+        log_request("error", path, resp.json())
         raise e

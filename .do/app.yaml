@@ -30,7 +30,7 @@ envs:
     value: "True"
   - key: MAIL_USERNAME
     scope: RUN_AND_BUILD_TIME
-    value: benmuschol@gmail.com
+    value: joeymrubas@gmail.com
   - key: STRIPE_PUBLISHABLE_KEY
     scope: RUN_AND_BUILD_TIME
     value: pk_live_xXucZDNkr09MapjHTHuRnPRh

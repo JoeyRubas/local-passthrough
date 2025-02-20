@@ -2,8 +2,8 @@ import os
 
 REPO_OPTIONS = {
     "default": {
-        "repo_slug": "MIT-Tab/mit-tab",
-        "branch": "master",
+        "repo_slug": "JoeyRubas/mit-tab-new-exports",
+        "branch": "large-beta",
         "name": "Default"
     },
     "discord": {
