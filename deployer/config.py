@@ -2,7 +2,7 @@ import os
 
 REPO_OPTIONS = {
     "default": {
-        "repo_slug": "MIT-Tab/mit-tab",
+        "repo_slug": "JoeyRubas/mit-tab-new-exports",
         "branch": "master",
         "name": "Default"
     },

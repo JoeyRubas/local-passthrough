@@ -1,3 +1,5 @@
+import datetime
+import os
 from flask import render_template
 from flask_mail import Message
 
@@ -6,7 +8,19 @@ from deployer.extensions import mail
 __email = 'benmuschol@gmail.com'
 
 
+def __simulate_email(subject, recipient, text_body, html_body):
+    timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    filename = f"email_{timestamp}.txt"
+    
+    email_content = f"Subject: {subject}\nRecipient: {recipient}\n\n{text_body}\n\n{html_body}"
+    
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(email_content)
+    return True
+
 def __send_email(subject, recipient, text_body, html_body):
+    if os.environ.get('BYPASS_EMAIL').lower() is 'true':
+        return __simulate_email(subject, recipient, text_body, html_body)
     msg = Message(subject, sender=__email, recipients=[recipient])
     msg.body = text_body
     msg.html = html_body

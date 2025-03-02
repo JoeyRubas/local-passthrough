@@ -8,78 +8,84 @@
     let checkbox;
     let deletion_date;
     let submit;
-
+    
     let stripeCost;
 
     var handler = StripeCheckout.configure({
-      key: "{{stripe_key}}",
-      locale: 'auto',
-      token: function (token) {
-        document.tournament.stripe_token.value = token.id
-        document.tournament.submit()
-      }
+        key: "{{stripe_key}}",
+        locale: 'auto',
+        token: function (token) {
+            document.tournament.stripe_token.value = token.id
+            document.tournament.submit()
+        }
     });
 
     function centsAsString(cents) {
-      return (cents / 100).toFixed(2)
+        return (cents / 100).toFixed(2)
     }
 
     function handleSubmit() {
-      const emailField = document.getElementById("email")
+        {% if bypass_stripe %}
+        document.tournament.stripe_token.value = "test_dummy_token";
+        document.tournament.submit();
+        return true;
+        {% else %}
+        const emailField = document.getElementById("email");
 
-      if (!document.tournament.stripe_token.value) {
-        handler.open({
-          name: 'MIT-Tab',
-          description: 'MIT-Tab server',
-          email: emailField.value,
-          amount: stripeCost
-        });
+        if (!document.tournament.stripe_token.value) {
+            handler.open({
+                name: 'MIT-Tab',
+                description: 'MIT-Tab server',
+                email: emailField.value,
+                amount: stripeCost
+            });
 
-        if (submit) {
-          submit.disabled = true
-          submit.value = 'Processing payment...'
+            if (submit) {
+                submit.disabled = true
+                submit.value = 'Processing payment...'
+            }
         }
-      }
 
-      return !!document.tournament.stripe_token.value;
+        return !!document.tournament.stripe_token.value;
+        {% endif %}
     }
 
     // Close Checkout on page navigation:
     window.addEventListener('popstate', function () {
-      handler.close();
+        handler.close();
     });
 
     document.addEventListener('DOMContentLoaded', function () {
-      checkbox = document.getElementById("add_test")
-      deletion_date = document.getElementById("deletion_date")
-      submit = document.getElementById("submit_button")
+        checkbox = document.getElementById("add_test")
+        deletion_date = document.getElementById("deletion_date")
+        submit = document.getElementById("submit_button")
 
-      function calculateCostAndUpdateButtonText() {
-        const daysActive = document.tournament.deletion_date.value
-          ? Math.max(0, Math.ceil((new Date(document.tournament.deletion_date.value) - new Date()) / (1000 * 60 * 60 * 24)))
-          : 0
+        function calculateCostAndUpdateButtonText() {
+            const daysActive = document.tournament.deletion_date.value
+                ? Math.max(0, Math.ceil((new Date(document.tournament.deletion_date.value) - new Date()) / (1000 * 60 * 60 * 24)))
+                : 0
 
-        console.log('days active', daysActive)
+                console.log('days active', daysActive)
 
-        if (daysActive <= 0) {
-          submit.disabled = true
-          submit.value = 'Confirm'
-          return;
+            if (daysActive <= 0) {
+                submit.disabled = true
+                submit.value = 'Confirm'
+                return;
+            }
+
+            submit.disabled = false;
+            stripeCost = fixedCost + dailyCost * daysActive;
+
+            if (checkbox.checked) {
+                stripeCost += testDailyCost * daysActive;
+            }
+            submit.value = 'Confirm & Pay $' + centsAsString(stripeCost)
         }
 
-        submit.disabled = false;
-        stripeCost = fixedCost + dailyCost * daysActive;
+        checkbox.addEventListener('change', calculateCostAndUpdateButtonText);
+        deletion_date.addEventListener('change', calculateCostAndUpdateButtonText);
 
-        if (checkbox.checked) {
-          stripeCost += testDailyCost * daysActive;
-        }
-        submit.value = 'Confirm & Pay $' + centsAsString(stripeCost)
-      }
-
-      checkbox.addEventListener('change', calculateCostAndUpdateButtonText);
-      deletion_date.addEventListener('change', calculateCostAndUpdateButtonText);
-
-      calculateCostAndUpdateButtonText();
+        calculateCostAndUpdateButtonText();
     })
 </script>
 
@@ -149,7 +155,7 @@
 
     <div class="form-group">
         {{ form.repo_options.label }} {% for error in form.repo_options.errors
-        %}
+            %}
         <span class="text-danger">[{{error}}]</span>
         {% endfor %}<br />
         {{ form.repo_options(class='form-control') }}

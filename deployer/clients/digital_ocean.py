@@ -1,6 +1,7 @@
 import os
 import logging
-from time import time, sleep
+from time import time, sleep, strftime, gmtime
+from time import time, sleep, strftime, gmtime
 
 import requests
 
@@ -53,7 +54,7 @@ def __build_app_spec(name, tab_password, database, repo_slug, branch):
     github_config = {
         "repo": repo_slug,
         "branch": branch,
-        "deploy_on_push": False,
+        "deploy_on_push": True,
     }
 
     base_config = {
@@ -68,12 +69,20 @@ def __build_app_spec(name, tab_password, database, repo_slug, branch):
             "routes": [{ "path": "/" }],
         }],
         "static_sites": [{
-            "name": "static",
-            "output_dir": "/var/www/tab/assets",
+            "name": "django-static",
+            "output_dir": "/var/www/tab/staticfiles",
             "dockerfile_path": "Dockerfile.static",
             "github": github_config,
             "routes": [{ "path": "/static" }]
-        }],
+        },
+        {
+            "name": "webpack-static",
+            "output_dir": "/var/www/tab/assets/webpack_bundles",
+            "dockerfile_path": "Dockerfile.static",
+            "github": github_config,
+            "routes": [{ "path": "/static/webpack_bundles" }]
+        }
+        ],
         "envs": [
             env_var("TAB_PASSWORD", tab_password, True),
             env_var("MYSQL_DATABASE", "${%s.DATABASE}" % database["name"]),
@@ -82,7 +91,7 @@ def __build_app_spec(name, tab_password, database, repo_slug, branch):
             env_var("MYSQL_HOST", "${%s.HOSTNAME}" % database["name"]),
             env_var("MYSQL_PORT", "${%s.PORT}" % database["name"]),
             env_var("BACKUP_STORAGE", "S3"),
-            env_var("BACKUP_BUCKET", "mittab-backups"),
+            env_var("BACKUP_BUCKET", "uva-tab-backup-bucket"),
             env_var("BACKUP_PREFIX", f"backups/{name}/{int(time())}"),
             env_var("BACKUP_S3_ENDPOINT", "https://nyc3.digitaloceanspaces.com"),
             env_var("AWS_ACCESS_KEY_ID", __access_key, True),
@@ -91,6 +100,7 @@ def __build_app_spec(name, tab_password, database, repo_slug, branch):
             env_var("SENTRY_DSN", os.environ.get("MITTAB_SENTRY_DSN", ""), True),
             env_var("TOURNAMENT_NAME", name),
             env_var("DISCORD_BOT_TOKEN", os.environ.get("DISCORD_BOT_TOKEN", ""), True),
+            env_var("DOMAINS", "https://"+name+".uva-tab.site")
         ],
         "databases": [{
             "name": database["name"],
@@ -216,6 +226,12 @@ def __post(path, data):
     except Exception as e:
         logger.error(f"Error posting {path}: {e}", exc_info=True)
         logger.debug(resp.json())
+        # Write error response to file
+        timestamp = strftime("%Y%m%d-%H%M%S", gmtime())
+        filename = f"error_response_{timestamp}.json"
+        with open(filename, 'w') as f:
+            f.write(str(resp.json()))
+        logger.error(f"Error response written to {filename}")
         raise e
 
 
