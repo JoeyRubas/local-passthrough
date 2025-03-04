@@ -1,6 +1,6 @@
 import os
 import logging
-from time import time, sleep, strftime, gmtime
+import sys
 from time import time, sleep, strftime, gmtime
 
 import requests
@@ -10,6 +10,11 @@ __secret_key = os.environ['DIGITALOCEAN_ACCESS_KEY_SECRET']
 __token = os.environ['DIGITALOCEAN_TOKEN']
 
 logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(sys.stdout)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 
 
 class NoDropletError(Exception):
@@ -59,6 +64,7 @@ def __build_app_spec(name, tab_password, database, repo_slug, branch):
 
     base_config = {
         "name": f"mittab-{name}",
+        "region": "nyc",
         "services": [{
             "name": "web",
             "instance_count": 1,
@@ -100,7 +106,7 @@ def __build_app_spec(name, tab_password, database, repo_slug, branch):
             env_var("SENTRY_DSN", os.environ.get("MITTAB_SENTRY_DSN", ""), True),
             env_var("TOURNAMENT_NAME", name),
             env_var("DISCORD_BOT_TOKEN", os.environ.get("DISCORD_BOT_TOKEN", ""), True),
-            env_var("DOMAINS", "https://"+name+".uva-tab.site")
+            env_var("MITTAB_ENV", "test-deployment" if name.endswith("-test") else "production"),
         ],
         "databases": [{
             "name": database["name"],

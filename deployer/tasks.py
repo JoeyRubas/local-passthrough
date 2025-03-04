@@ -1,5 +1,7 @@
 import time
 import logging
+import os
+import sys
 from datetime import datetime
 
 from celery.schedules import crontab
@@ -10,6 +12,11 @@ from deployer.clients import email, digital_ocean
 from deployer.models import App
 
 logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(sys.stdout)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 
 
 class ServerNotReadyError(Exception):
@@ -26,10 +33,10 @@ class BackupFailedError(Exception):
 
 @celery.on_after_configure.connect
 def setup_periodic_tasks(sender, **kwargs):
-    if App.config.get('DEPLOYER_PROCESS') == 'celery':
+    if os.environ.get('DEPLOYER_PROCESS') == 'celery':
         sender.add_periodic_task(
             crontab(hour=10, minute=30),
-            delete_apps().s()
+            delete_apps.s()
         )
 
 @celery.task()
@@ -60,7 +67,7 @@ def deploy_app(app, password):
         app.deactivate()
         raise e
 
-
+@celery.task()
 def delete_apps():
     apps = App.query.filter_by(active=True).all()
     current_date = datetime.now().date()
