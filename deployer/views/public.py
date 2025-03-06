@@ -20,6 +20,7 @@ def index():
 
 @bp.route('/tournaments/new', methods=['GET', 'POST'])
 def new_tournament():
+    BYPASS_STRIPE = os.environ.get('BYPASS_STRIPE', "false").lower() == 'true'
     form = TournamentForm()
 
     if form.validate_on_submit():
@@ -39,7 +40,7 @@ def new_tournament():
         test_cost = stripe.DAILY_COST_TEST_TOURNAMENT * days_active
         cost = fixed_cost + base_cost + test_cost if form.add_test.data else base_cost + fixed_cost
 
-        if stripe.charge(app.email, form.stripe_token.data, cost):
+        if stripe.charge(app.email, form.stripe_token.data, cost) or BYPASS_STRIPE:
             db.session.add(app)
             db.session.commit()
             deploy_tournament.delay(app.id, form.password.data)
@@ -66,6 +67,11 @@ def new_tournament():
                 "danger"
             )
 
+    if BYPASS_STRIPE:
+        return render_template('new.html',
+              title='Create a Tournament',
+              form=form,
+              BYPASS_STRIPE=True)
     return render_template('new.html',
                            title='Create a Tournament',
                            form=form,

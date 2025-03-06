@@ -25,6 +25,8 @@ def get_publishable_key():
 
 def charge(email, stripe_token, amount):
     try:
+        if os.environ["BYPASS_STRIPE"] == "True":
+            return True
         customer = stripe.Customer.create(
             email=email,
             source=stripe_token
