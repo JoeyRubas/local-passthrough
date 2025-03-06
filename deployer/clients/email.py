@@ -19,7 +19,7 @@ def __simulate_email(subject, recipient, text_body, html_body):
     return True
 
 def __send_email(subject, recipient, text_body, html_body):
-    if os.environ.get('BYPASS_EMAIL').lower() is 'true':
+    if os.environ.get('BYPASS_EMAIL').lower() == 'true':
         return __simulate_email(subject, recipient, text_body, html_body)
     msg = Message(subject, sender=__email, recipients=[recipient])
     msg.body = text_body
